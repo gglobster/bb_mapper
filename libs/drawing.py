@@ -74,8 +74,8 @@ def canvasser(hCan,vCan,transX,transY,outfile) :
     canvasN.setLineCap(0)
     return canvasN
 
-def base_draw(canvas, cName, cLen, feats, key, dop_Y, Y0, X_shift,
-             map_mode, annot_cnt, offset, offset_mode, seq_len, annot_mode) :
+def base_draw(canvas, cName, cLen, feats, key, dop_Y, Y0, X_shift, map_mode,
+             annot_cnt, offset, offset_mode, seq_len, annot_mode, side) :
     """Draw contig baseline and features."""
     # draw plasmid baseline
     baseliner(cLen, canvas, Y0, offset, offset_mode)
@@ -93,9 +93,11 @@ def base_draw(canvas, cName, cLen, feats, key, dop_Y, Y0, X_shift,
     shift_flag = False
     for feature in feats :
         if feature.type == 'contig':
-            contig_ticker(canvas, feature, cLen, Y0, offset, offset_mode)
+            contig_ticker(canvas, feature, cLen, Y0, offset, offset_mode,
+                          side)
         elif feature.type == 'spacer':
-            spacer_ticker(canvas, feature, cLen, Y0, offset, offset_mode)
+            spacer_ticker(canvas, feature, cLen, Y0, offset, offset_mode,
+                          side)
         elif feature.type == 'ref_seg':
             ref_ticker(canvas, feature, cLen, Y0, offset, offset_mode)
         elif feature.type == 'CDS' or feature.type == 'cds':
@@ -277,10 +279,10 @@ def orf_eus(canvas, featL, coords, color_hex, shape):
     pORF.close()
     canvas.setFillColor(black)
 
-def contig_ticker(canvas, feature, cLen, Y0, offset, offset_mode):
+def contig_ticker(canvas, feature, cLen, Y0, offset, offset_mode, side):
     """Draw contig separators."""
     # get contig name
-    name = feature.qualifiers.get('id')[0]
+    name = feature.qualifiers.get('locus_tag')[0]
     # take start and end points
     location = feature.location
     Zs = location.nofuzzy_start
@@ -297,22 +299,31 @@ def contig_ticker(canvas, feature, cLen, Y0, offset, offset_mode):
         offZe = Ze
     xs, xe = offZs*u, offZe*u
     # set Y axis coordinates
-    y0 = Y0-dop*3.5
+    if side == 'low':
+        y0 = Y0-dop*3.5
+        yT1 = y0-h*4
+        yT2 = y0-h*4.5
+        yT3 = y0-h*8
+    else:
+        y0 = Y0+dop*3.5
+        yT1 = y0+h*4
+        yT2 = y0+h*4.5
+        yT3 = y0+h*8
     # draw
     canvas.setLineWidth(2)
     ttl = canvas.beginPath()
     ttl.moveTo(xs,y0)
-    ttl.lineTo(xs,y0-h*4)
-    ttl.lineTo(xs+dop,y0-h*4)
+    ttl.lineTo(xs,yT1)
+    ttl.lineTo(xs+dop,yT1)
     canvas.drawPath(ttl, stroke=1, fill=0)
     canvas.setFont(bFont, NfSize)
-    canvas.drawString(xs+dop*2, y0-h*4.5, name)
+    canvas.drawString(xs+dop*2, yT2, name)
     canvas.setFont(rFont, SfSize)
-    canvas.drawString(xs+dop*2,y0-h*8,"".join(["[",str(Zs),"-",str(Ze),"]"]))
+    canvas.drawString(xs+dop*2,yT3,"".join(["[",str(Zs),"-",str(Ze),"]"]))
     canvas.setFont(rFont, NfSize)
     ttl.close()
 
-def spacer_ticker(canvas, feature, cLen, Y0, offset, offset_mode):
+def spacer_ticker(canvas, feature, cLen, Y0, offset, offset_mode, side):
     """Draw separator indicators."""
     # take start and end points
     location = feature.location
@@ -331,12 +342,16 @@ def spacer_ticker(canvas, feature, cLen, Y0, offset, offset_mode):
     xs, xe = offZs*u, offZe*u
     # set Y axis coordinates
     y0 = Y0-dop*3.5
+    if side == 'low':
+        yT1 = y0-h*4
+    else:
+        yT1 = y0+h*4
     # draw
     canvas.setLineWidth(2)
     ttl = canvas.beginPath()
     ttl.moveTo(xs,y0)
-    ttl.lineTo(xs,y0-h*4)
-    ttl.lineTo(xe,y0-h*4)
+    ttl.lineTo(xs,yT1)
+    ttl.lineTo(xe,yT1)
     ttl.lineTo(xe,y0)
     canvas.drawPath(ttl, stroke=1, fill=0)
     ttl.close()
@@ -518,12 +533,13 @@ def pairwise_draw(ref_name, q_name, ref_file, q_file, segs, map_file, q_inv,
     # draw shading legend
     heatkey(m_canvas, -pNsize, -pNsize/2)
     # draw ref baseline and features
-    base_draw(m_canvas, ref_name, ref_len, ref_feat, key1, doLup, ref_Y,
-             0, mode1, annot_cnt, g_offset[0], 'nudge', seq_len, annot_mode)
+    base_draw(m_canvas, ref_name, ref_len, ref_feat, key1, doLup, ref_Y, 0,
+             mode1, annot_cnt, g_offset[0], 'nudge', seq_len, annot_mode,
+             'top')
     # draw query baseline and features
     base_draw(m_canvas, q_name, q_len, q_feat, key2, -doLdn, query_Y,
               seq_len/2, mode2, annot_cnt, g_offset[1], 'loop', seq_len,
-              annot_mode)
+              annot_mode, 'low')
     # draw pairwise similarity shading
     try:
         for xa, xb, xc, xd, idp in segs:
