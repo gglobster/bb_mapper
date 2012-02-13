@@ -1,16 +1,27 @@
-from config import segtype
+from config import segtype, g_order
 from array_tetris import offset_q2r_coords
 from drawing import pairwise_draw
 from loaders import load_genbank
 import numpy as np
 
+def map_multi_aln(base, genomes, maps_dir):
+    """Generate map of multiple alignment."""
+    # set inputs and outputs
+    map_file = maps_dir+base+".pdf"
+    # pair up genomes based on specified order
+
+
+
+    #seg_file = segs_dir+"/"+genome.name+"_"+ref.name+"_segs.txt"
+
+
 def map_pw_aln(ref, genome, segs_dir, maps_dir):
-    """Generate map of construct aligned to reference."""
+    """Generate map of query aligned to reference."""
     # set inputs and outputs
     seg_file = segs_dir+"/"+genome.name+"_"+ref.name+"_segs.txt"
     map_file = maps_dir+genome.name+"_vs_"+ref.name+".pdf"
     # start mapping
-    try: open(genome.gbk)
+    try: open(genome.gbk) # remains from backbonomist version
     except IOError:
         print "WARNING: No scaffold construct to map"
     else:
