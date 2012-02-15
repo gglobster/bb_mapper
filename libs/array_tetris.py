@@ -175,33 +175,46 @@ def get_anchor_loc(quad_array):
     anchor = sl_array[0]
     return anchor
 
-def offset_q2r_coords(data_array, q_len, value_pair):
-    """Offset segment coordinates in array to specified values.
-
-    This is tailored for pairwise alignments in which the reference and
-    query sequences are not treated equally. The reference is treated as a
-    linear molecule and its coordinates (first pair in array quintet) get
-    nudged to the right. The query is treated as a circular molecule and its
-    coordinates (second pair in array quintet) are looped around the zero
-    position.
-    """
-    # set up an array stub to receive new rows
-    all_rows_list = []
-    # run offsetting
-    r_off, q_off = value_pair
-    for xa, xb, xc, xd, idp in data_array:
-        xao = nudge_coord(xa, r_off)
-        xbo = nudge_coord(xb, r_off)
-        xco = offset_coord(xc, q_len, q_off)
-        xdo = offset_coord(xd, q_len, q_off)
-        offset_row = (xao, xbo, xco, xdo, idp)
+def offset_segdata(segdata, ref, query):
+    """Offset segment coordinates in array to specified values."""
+    all_rows_list = [] # array stub to receive new rows
+    for xa, xb, xc, xd, idp in segdata:
+        # run loop offsetting
+        xao = offset_coord(xa, ref.len, ref.offset)
+        xbo = offset_coord(xb, ref.len, ref.offset)
+        xco = offset_coord(xc, query.len, query.offset)
+        xdo = offset_coord(xd, query.len, query.offset)
+        # run nudge offsetting
+        xan = nudge_coord(xao, ref.nudge)
+        xbn = nudge_coord(xbo, ref.nudge)
+        xcn = nudge_coord(xco, query.nudge)
+        xdn = nudge_coord(xdo, query.nudge)
+        # save new coordinates
+        offset_row = (xan, xbn, xcn, xdn, idp)
         all_rows_list.append(offset_row)
-    # make a new array from the list of rows
-    offset_array = np.array(all_rows_list, dtype=segtype)
-    return offset_array
+    return np.array(all_rows_list, dtype=segtype)
+
+def process_segdata(seg_file, ref, query):
+    """Process segments data."""
+    try:
+        # load segments
+        segdata = np.loadtxt(seg_file, skiprows=1, dtype=segtype)
+
+    except IOError:
+            print "\nERROR: could not load segments data"
+            raise
+    except StopIteration:
+            print "\nERROR"
+            raise
+    else: 
+        # idp-based clumping
+        # TODO: add clumping function
+        # offset coordinates
+        segdata = offset_segdata(segdata, ref, query)
+    return segdata
 
 def offset_coord(coord, length, offset) :
-    """Calculate coordinate offset."""
+    """Calculate coordinate looping offset."""
     # calculate linear coordinate change
     coft = (abs(coord)-abs(offset)+1)
     if coft < 0 :
@@ -223,7 +236,7 @@ def offset_coord(coord, length, offset) :
     return coff7
 
 def nudge_coord(coord, offset) :
-    """Calculate coordinate offset."""
+    """Calculate coordinate nudge offset."""
     # calculate linear coordinate change
     coft = (abs(coord)+abs(offset)+1)
     # recall original sign
@@ -235,22 +248,103 @@ def nudge_coord(coord, offset) :
     coff7 = sign0 * coft
     return coff7
 
-def shade_split(xa, xb, xc, xd, q_len):
+def shade_split(xa, xb, xc, xd, ref, query):
     """Split shaded areas that sit across the map origin.
 
-    This assumes that xa -> xb is always non-split since it is on the
-    reference, which is treated as linear, not circular. It also assumes that
-    only reference-side segments can be of negative sign.
+    This assumes that only reference-side segments can be of negative sign
+    because that's how Mauve aligner manages pairwise alignments.
     """
+    # basics
+    r_ori = ref.nudge
+    r_end = ref.nudge+ref.len
+    q_ori = query.nudge
+    q_end = query.nudge+query.len
+    # process
     if xa > 0:
-        xa1, xb1, xc1, xd1 = xa, xa+q_len-xc, xc, q_len
-        xa2, xb2, xc2, xd2 = xa+q_len-xc, xb, 1, xd
-    else: # xa <0
-        xa1, xb1, xc1, xd1 = xa, xa-xd, 1, xd
-        xa2, xb2, xc2, xd2 = xa-xd, xb, xc, q_len
-    coords1 = xa1, xb1, xc1, xd1
-    coords2 = xa2, xb2, xc2, xd2
-    return coords1, coords2
+        if xa > xb:
+            if xc > xd:
+                if r_end-xa < q_end-xc:
+                    print "A" # OK
+                    xa1, xb1, xc1, xd1 = xa, r_end, xc, xc+r_end-xa
+                    xa2, xb2, xc2, xd2 = r_ori, r_ori+q_end-xd1, xd1, q_end
+                    xa3, xb3, xc3, xd3 = xb2, xb, q_ori, xd
+                    return (xa1, xb1, xc1, xd1), \
+                           (xa2, xb2, xc2, xd2), \
+                           (xa3, xb3, xc3, xd3)
+                elif r_end-xa > q_end-xc:
+                    print "B" # OK
+                    xa1, xb1, xc1, xd1 = xa, xa+q_end-xc, xc, q_end
+                    xa2, xb2, xc2, xd2 = xb1, r_end, q_ori, q_ori+r_end-xb1
+                    xa3, xb3, xc3, xd3 = r_ori, xb, xd2, xd
+                    return (xa1, xb1, xc1, xd1), \
+                           (xa2, xb2, xc2, xd2), \
+                           (xa3, xb3, xc3, xd3)
+                else: # exactly the same length, rare but possible
+                    print "C"
+                    xa1, xb1, xc1, xd1 = xa, r_end, xc, q_end
+                    xa2, xb2, xc2, xd2 = r_ori, xb, q_ori, xd
+                    return (xa1, xb1, xc1, xd1), \
+                           (xa2, xb2, xc2, xd2)
+            else:
+                print "D" # OK
+                xa1, xb1, xc1, xd1 = xa, r_end, xc, xc+r_end-xa
+                xa2, xb2, xc2, xd2 = r_ori, xb, xd1, xd
+                return (xa1, xb1, xc1, xd1), \
+                       (xa2, xb2, xc2, xd2)
+        else:
+            if xc > xd:
+                print "E" # OK
+                xa1, xb1, xc1, xd1 = xa, xa+q_end-xc, xc, q_end
+                xa2, xb2, xc2, xd2 = xb1, xb, q_ori, xd
+                return (xa1, xb1, xc1, xd1), \
+                       (xa2, xb2, xc2, xd2)
+            else:
+                # shouldn't happen
+                print "ERROR? in shade_split"
+                return xa, xb, xc, xd
+    # xa <0
+    else:
+        if abs(xa) > abs(xb):
+            if xc > xd:
+                if r_end+xa > xd-q_ori:
+                    print "F" # OK
+                    xa1, xb1, xc1, xd1 = xa, xa-xd+q_ori, q_ori, xd
+                    xa2, xb2, xc2, xd2 = xb1, -r_end, xc-xb-r_ori, q_end
+                    xa3, xb3, xc3, xd3 = -r_ori, xb, xc, xc2
+                    return (xa1, xb1, xc1, xd1), \
+                           (xa2, xb2, xc2, xd2), \
+                           (xa3, xb3, xc3, xd3)
+                elif r_end+xa < xd-q_ori:
+                    print "G" # OK
+                    xa1, xb1, xc1, xd1 = xa, -r_end, xd-r_end-xa, xd
+                    xa2, xb2, xc2, xd2 = -r_ori, -r_ori-xc1+q_ori, q_ori, xc1
+                    xa3, xb3, xc3, xd3 = xb2, xb, xc, q_end
+                    return (xa1, xb1, xc1, xd1), \
+                           (xa2, xb2, xc2, xd2), \
+                           (xa3, xb3, xc3, xd3)
+                else: # exactly the same length, rare but possible
+                    print "H"
+                    xa1, xb1, xc1, xd1 = xa, -r_end, q_ori, xd
+                    xa2, xb2, xc2, xd2 = -r_ori, xb, xc, q_end
+                    return (xa1, xb1, xc1, xd1), \
+                           (xa2, xb2, xc2, xd2)
+            else:
+                print "I" # OK
+                xa1, xb1, xc1, xd1 = xa, -r_end, xd-(r_end+xa), xd
+                xa2, xb2, xc2, xd2 = -r_ori, xb, xc, xc1
+                return (xa1, xb1, xc1, xd1), \
+                       (xa2, xb2, xc2, xd2)
+        else:
+            if xc > xd:
+                print "J" # OK
+                xa1, xb1, xc1, xd1 = xa, xa-(xd-q_ori), q_ori, xd
+                xa2, xb2, xc2, xd2 = xb1, xb, xc, q_end
+                return (xa1, xb1, xc1, xd1), \
+                       (xa2, xb2, xc2, xd2)
+            else:
+                # shouldn't happen
+                print "ERROR? in shade_split"
+                return xa, xb, xc, xd
 
 def coord_flipper(axr,bxr) :
     """Flip negative coordinates."""

@@ -1,9 +1,15 @@
+import os, re
 import subprocess
+from os import path
 from Bio.Align.Applications import ClustalwCommandline
 from Bio.Align.Applications import MuscleCommandline
-from config import mauve_exec
+from config import mauve_exec, max_size, chop_mode
 from writers import ensure_dir, write_fasta
-from parsing import parse_clustal_idstars
+from parsing import parse_clustal_idstars, mauver_load2_k0
+from loaders import load_genbank, from_dir
+from array_tetris import chop_rows
+
+
 
 def align_clustal(file_name):
     """Make external call to ClustalW aligner."""
@@ -33,6 +39,42 @@ def align_mauve(file_list, output):
     report = {'output': output, 'error': error}
     # TODO: should set up something to parse Mauve errors
     return report
+
+def mauve_pw_align(ref, query, dirs):
+    """Set up and perform a pairwise alignment with Mauve."""
+    # set outputs
+    mauve_outfile = dirs['mauve']+ref.name+"_"+query.name+".mauve"
+    segfile = dirs['aln_segs']+ref.name+"_"+query.name+"_segs.txt"
+    # check for existing alignment
+    if path.exists(segfile):
+        print "already done"
+    else:
+        # prep segments file
+        open(segfile, 'w').write('')
+        # purge any pre-existing sslist files
+        sslist_files = from_dir(dirs['seqfiles'], re.compile(r'.*\.sslist.*'))
+        for sslist in sslist_files:
+            try: os.remove(dirs['seqfiles']+sslist)
+            except Exception: raise
+        # do Mauve alignment
+        file_list = [ref.gbk, query.gbk]
+        align_mauve(file_list, mauve_outfile)
+        try:
+            # parse Mauve output (without initial clumping)
+            coords = mauver_load2_k0(mauve_outfile+".backbone", 0)
+            print "\nSegment results:", len(coords), '->',
+            # chop segments that are too long
+            chop_array = chop_rows(coords, max_size, chop_mode)
+            print len(chop_array), 'segments <', max_size, 'bp'
+            # make detailed pairwise alignments of the segments
+            print "Aligning segments ..."
+            ref_rec = load_genbank(ref.gbk)
+            query_rec = load_genbank(query.gbk)
+            id = iter_align(chop_array, ref_rec, query_rec,
+                            dirs['aln_segs'], segfile)
+            print "Results:", id, "% id. overall"
+        except IOError:
+            print "\nERROR: Mauve alignment failed"
 
 def iter_align(coord_array, ref_rec, query_rec, aln_dir, segs_file):
     """Iterate through array of coordinates to make pairwise alignments."""
@@ -76,3 +118,4 @@ def iter_align(coord_array, ref_rec, query_rec, aln_dir, segs_file):
     overall_id = int((float(aln_id)/aln_len)*100)
     print ""
     return overall_id
+

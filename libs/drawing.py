@@ -75,10 +75,12 @@ def canvasser(hCan,vCan,transX,transY,outfile) :
     return canvasN
 
 def base_draw(canvas, cName, cLen, feats, key, dop_Y, Y0, X_shift, map_mode,
-             annot_cnt, offset, offset_mode, seq_len, annot_mode, side) :
+             annot_cnt, nudge, offset, seq_len, annot_mode, side) :
     """Draw contig baseline and features."""
+    print 'nudge by:', nudge
+    print 'offset by:', offset
     # draw plasmid baseline
-    baseliner(cLen, canvas, Y0, offset, offset_mode)
+    baseliner(cLen, canvas, Y0, nudge)
     # label the baseline with plasmid name and size
     labeller(cName, cLen, canvas, Y0)
     # label the annotations list
@@ -93,13 +95,11 @@ def base_draw(canvas, cName, cLen, feats, key, dop_Y, Y0, X_shift, map_mode,
     shift_flag = False
     for feature in feats :
         if feature.type == 'contig':
-            contig_ticker(canvas, feature, cLen, Y0, offset, offset_mode,
-                          side)
+            contig_ticker(canvas, feature, cLen, Y0, nudge, offset, side)
         elif feature.type == 'spacer':
-            spacer_ticker(canvas, feature, cLen, Y0, offset, offset_mode,
-                          side)
+            spacer_ticker(canvas, feature, cLen, Y0, nudge, offset, side)
         elif feature.type == 'ref_seg':
-            ref_ticker(canvas, feature, cLen, Y0, offset, offset_mode)
+            ref_ticker(canvas, feature, cLen, Y0, nudge, offset)
         elif feature.type == 'CDS' or feature.type == 'cds':
             ORFcnt += 1
             # determine functional category color
@@ -111,7 +111,7 @@ def base_draw(canvas, cName, cLen, feats, key, dop_Y, Y0, X_shift, map_mode,
             color_hex = HexColor(fct_colors[fct_key][0])
             # calculate coordinates for canvas
             featL, midLZ, coords, split_flag = orf_coords(feature, Y0, cLen,
-                                                         offset, offset_mode)
+                                                          nudge, offset)
             # check for CDS sitting across the origin
             if split_flag:
                 # split coords
@@ -134,19 +134,16 @@ def base_draw(canvas, cName, cLen, feats, key, dop_Y, Y0, X_shift, map_mode,
                                    Y0+dop_Y, midLZ, X_shift, split_flag,
                                    annot_mode)
 
-def baseliner(cLen, canvas, Y_map, offset, offset_mode):
+def baseliner(cLen, canvas, Y_map, nudge):  # loop offset has no effect
     """Draw sequence baseline."""
     canvas.setLineWidth(3)
     y0 = Y_map
     Zs = 0              # all sequences are initially aligned on the left
     Ze = cLen
-    # calculate offsets
-    if offset_mode == 'nudge':
-        offZs = nudge_coord(Zs, offset)
-        offZe = nudge_coord(Ze, offset)
-    else:
-        offZs = Ze
-        offZe = Zs
+    # calculate nudge offsets
+    offZs = nudge_coord(Zs, nudge)
+    offZe = nudge_coord(Ze, nudge)
+    # set zeroes
     x0 = offZs*u
     x1 = offZe*u
     pBL = canvas.beginPath()
@@ -205,7 +202,7 @@ def orf_split(coords, cLen):
         featL2 = xe/u
     return coords1, featL1, coords2, featL2
 
-def orf_coords(feature, Y_map, cLen, offset, offset_mode):
+def orf_coords(feature, Y_map, cLen, nudge, offset):
     """Calculate CDS coordinates in drawing space."""
     # evaluate what strand the ORF is on (determines direction of arrow)
     cstrand = feature.strand
@@ -216,23 +213,20 @@ def orf_coords(feature, Y_map, cLen, offset, offset_mode):
     Zs = location.nofuzzy_start
     Ze = location.nofuzzy_end
     featL = Ze - Zs
-    # calculate offset coordinates
-    if offset_mode == 'loop':
-        Zs = offset_coord(Zs, cLen, offset)
-        Ze = offset_coord(Ze, cLen, offset)
-    elif offset_mode == 'nudge':
-        Zs = nudge_coord(Zs, offset)
-        Ze = nudge_coord(Ze, offset)
-    else:
-        pass
+    # calculate loop offset coordinates
+    loop_offZs = offset_coord(Zs, cLen, offset)
+    loop_offZe = offset_coord(Ze, cLen, offset)
+    # calculate nudge offset coordinates
+    offZs = nudge_coord(loop_offZs, nudge)
+    offZe = nudge_coord(loop_offZe, nudge)
     # calculate X axis coordinates (expr of cstrand has changed)
     if cstrand == -1 :	# reverse orientation
-        xs,xe = Ze*u,Zs*u		# start and end
-        xn = xe+minL*u		# neck of arrow
+        xs,xe = offZe*u,offZs*u		# start and end
+        xn = xe+minL*u		        # neck of arrow
     else :				# forward orientation
-        xs,xe = Zs*u,Ze*u		# start and end
-        xn = xe-minL*u		# neck of arrow
-    midLZ = ((Zs+Ze)/2)*u	# middle of ORF for optional label
+        xs,xe = offZs*u,offZe*u		# start and end
+        xn = xe-minL*u		        # neck of arrow
+    midLZ = ((offZs+offZe)/2)*u	    # middle of ORF for optional label
     # evaluate splits
     split_flag = False
     if (xs < xe and cstrand == -1) or (xs > xe and cstrand == 1):
@@ -279,7 +273,7 @@ def orf_eus(canvas, featL, coords, color_hex, shape):
     pORF.close()
     canvas.setFillColor(black)
 
-def contig_ticker(canvas, feature, cLen, Y0, offset, offset_mode, side):
+def contig_ticker(canvas, feature, cLen, Y0, nudge, offset, side):
     """Draw contig separators."""
     # get contig name
     name = feature.qualifiers.get('locus_tag')[0]
@@ -287,16 +281,12 @@ def contig_ticker(canvas, feature, cLen, Y0, offset, offset_mode, side):
     location = feature.location
     Zs = location.nofuzzy_start
     Ze = location.nofuzzy_end
-    # calculate offset coordinates
-    if offset_mode == 'loop':
-        offZs = offset_coord(Zs, cLen, offset)
-        offZe = offset_coord(Ze, cLen, offset)
-    elif offset_mode == 'nudge':
-        offZs = nudge_coord(Zs, offset)
-        offZe = nudge_coord(Ze, offset)
-    else:
-        offZs = Zs
-        offZe = Ze
+    # calculate loop offset coordinates
+    loop_offZs = offset_coord(Zs, cLen, offset)
+    loop_offZe = offset_coord(Ze, cLen, offset)
+    # calculate nudge offset coordinates
+    offZs = nudge_coord(loop_offZs, nudge)
+    offZe = nudge_coord(loop_offZe, nudge)
     xs, xe = offZs*u, offZe*u
     # set Y axis coordinates
     if side == 'low':
@@ -323,22 +313,18 @@ def contig_ticker(canvas, feature, cLen, Y0, offset, offset_mode, side):
     canvas.setFont(rFont, NfSize)
     ttl.close()
 
-def spacer_ticker(canvas, feature, cLen, Y0, offset, offset_mode, side):
+def spacer_ticker(canvas, feature, cLen, Y0, nudge, offset, side):
     """Draw separator indicators."""
     # take start and end points
     location = feature.location
     Zs = location.nofuzzy_start
     Ze = location.nofuzzy_end
-    # calculate offset coordinates
-    if offset_mode == 'loop':
-        offZs = offset_coord(Zs, cLen, offset)
-        offZe = offset_coord(Ze, cLen, offset)
-    elif offset_mode == 'nudge':
-        offZs = nudge_coord(Zs, offset)
-        offZe = nudge_coord(Ze, offset)
-    else:
-        offZs = Zs
-        offZe = Ze
+    # calculate loop offset coordinates
+    loop_offZs = offset_coord(Zs, cLen, offset)
+    loop_offZe = offset_coord(Ze, cLen, offset)
+    # calculate nudge offset coordinates
+    offZs = nudge_coord(loop_offZs, nudge)
+    offZe = nudge_coord(loop_offZe, nudge)
     xs, xe = offZs*u, offZe*u
     # set Y axis coordinates
     y0 = Y0-dop*3.5
@@ -356,7 +342,7 @@ def spacer_ticker(canvas, feature, cLen, Y0, offset, offset_mode, side):
     canvas.drawPath(ttl, stroke=1, fill=0)
     ttl.close()
 
-def ref_ticker(canvas, feature, cLen, Y0, offset, offset_mode):
+def ref_ticker(canvas, feature, cLen, Y0, nudge, offset):
     """Draw contig separators."""
     # get contig name
     name = feature.qualifiers.get('id')[0]
@@ -364,16 +350,12 @@ def ref_ticker(canvas, feature, cLen, Y0, offset, offset_mode):
     location = feature.location
     Zs = location.nofuzzy_start
     Ze = location.nofuzzy_end
-    # calculate offset coordinates
-    if offset_mode == 'loop':
-        offZs = offset_coord(Zs, cLen, offset)
-        offZe = offset_coord(Ze, cLen, offset)
-    elif offset_mode == 'nudge':
-        offZs = nudge_coord(Zs, offset)
-        offZe = nudge_coord(Ze, offset)
-    else:
-        offZs = Zs
-        offZe = Ze
+    # calculate loop offset coordinates
+    loop_offZs = offset_coord(Zs, cLen, offset)
+    loop_offZe = offset_coord(Ze, cLen, offset)
+    # calculate nudge offset coordinates
+    offZs = nudge_coord(loop_offZs, nudge)
+    offZe = nudge_coord(loop_offZe, nudge)
     xs, xe = offZs*u, offZe*u
     xmid = (xe+xs)/2
     # set Y axis coordinates
@@ -453,21 +435,20 @@ def contig_draw(cName, in_file, out_file, annot_mode, key):
     ctg_Y = vmar
     # set up main canvas
     canvas = canvasser(hCan, vCan, transX, transY, out_file)
-    # draw contig baseline and features
+    # draw contig baseline and features -- offsetting disabled
     base_draw(canvas, cName, ctg_len, feats, key, -doLdn, ctg_Y, 0, 'single',
-             annot_cnt, None, None, seq_len, annot_mode)
+             annot_cnt, 0, 0, seq_len, annot_mode, 'top')
     # draw scale
     seq_scale(canvas, (ctg_len*u)-pNsize, incrT, incrN, dip, dop)
     # write to file and finalize the figure
     canvas.showPage()
     canvas.save()
 
-def pairwise_draw(ref_name, q_name, ref_file, q_file, segs, map_file, q_inv,
-                 g_offset, mode1, mode2, annot_mode, key1, key2):
+def pairwise_draw(ref, query, segs, map_file, mode1, mode2, annot_mode,
+                  key1, key2):
     """Draw pairwise alignment map with similarity shading."""
-    # load ref and query records
-    # ref first
-    ref_record = load_genbank(ref_file)
+    # load ref record
+    ref_record = load_genbank(ref.gbk)
     ref_len = len(ref_record.seq)
     ref_feat = ref_record.features
     ref_cds = [feature for feature in ref_feat
@@ -484,9 +465,9 @@ def pairwise_draw(ref_name, q_name, ref_file, q_file, segs, map_file, q_inv,
         ref_annot_cnt = sum(ref_annot_cds)
     else:
         ref_annot_cnt = len(ref_cds)
-    # now query
-    query_record = load_genbank(q_file)
-    if q_inv:
+    # load query record
+    query_record = load_genbank(query.gbk)
+    if query.invert:
         query_record = query_record.reverse_complement()
     q_len = len(query_record.seq)
     q_feat = query_record.features
@@ -505,8 +486,8 @@ def pairwise_draw(ref_name, q_name, ref_file, q_file, segs, map_file, q_inv,
     else:
         query_annot_cnt = len(query_cds)
     # calculate main canvas dimensions - horizontal
-    if ref_len+g_offset[0] > q_len:
-        ctg_len = ref_len+g_offset[0]
+    if ref_len+ref.nudge > q_len:
+        ctg_len = ref_len+ref.nudge
     else:
         ctg_len = q_len
     if ctg_len*u < 2000:
@@ -533,26 +514,24 @@ def pairwise_draw(ref_name, q_name, ref_file, q_file, segs, map_file, q_inv,
     # draw shading legend
     heatkey(m_canvas, -pNsize, -pNsize/2)
     # draw ref baseline and features
-    base_draw(m_canvas, ref_name, ref_len, ref_feat, key1, doLup, ref_Y, 0,
-             mode1, annot_cnt, g_offset[0], 'nudge', seq_len, annot_mode,
+    base_draw(m_canvas, ref.name, ref_len, ref_feat, key1, doLup, ref_Y, 0,
+             mode1, annot_cnt, ref.nudge, ref.offset, seq_len, annot_mode,
              'top')
     # draw query baseline and features
-    base_draw(m_canvas, q_name, q_len, q_feat, key2, -doLdn, query_Y,
-              seq_len/2, mode2, annot_cnt, g_offset[1], 'loop', seq_len,
+    base_draw(m_canvas, query.name, q_len, q_feat, key2, -doLdn, query_Y,
+              seq_len/2, mode2, annot_cnt, query.nudge, query.offset, seq_len,
               annot_mode, 'low')
     # draw pairwise similarity shading
     try:
         for xa, xb, xc, xd, idp in segs:
             # evaluate color shading category
             sh_color = HexColor(simcolor(idp))
-            # check for split
+            # check for split 
             if abs(xa) > abs(xb) or abs(xc) > abs(xd):
-                coords1, coords2 = shade_split(xa, xb, xc, xd, q_len)
-                xa1, xb1, xc1, xd1 = coords1
-                xa2, xb2, xc2, xd2 = coords2
-                # draw shading
-                shadowfax(m_canvas, xa1, xb1, xc1, xd1, ref_Y, query_Y, sh_color)
-                shadowfax(m_canvas, xa2, xb2, xc2, xd2, ref_Y, query_Y, sh_color)
+                new_segpairs = shade_split(xa, xb, xc, xd, ref, query)
+                for xa1, xb1, xc1, xd1 in new_segpairs:
+                    # draw shading
+                    shadowfax(m_canvas, xa1, xb1, xc1, xd1, ref_Y, query_Y, sh_color)
             else:
                 # draw shading
                 shadowfax(m_canvas, xa, xb, xc, xd, ref_Y, query_Y, sh_color)
@@ -561,6 +540,11 @@ def pairwise_draw(ref_name, q_name, ref_file, q_file, segs, map_file, q_inv,
     # write to file and finalize the figure
     m_canvas.showPage()
     m_canvas.save()
+
+def multi_draw(g_pairs, segdata_list, mapfile):
+    """Draw multiple alignment map with similarity shading."""
+    print "Lookin\' good!"
+    # use map_mode = 'n'
 
 def shadowfax(canvas_def, xa, xb, xc, xd, aby0, cdy0, sh_color):
     """Draw shaded area between homologous segments."""

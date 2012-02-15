@@ -1,4 +1,3 @@
-
 # Proximity thresholds for clumping
 prox_D = 2000   # for ballpark estimation
 prox_F = 500    # for fine alignment (set to 0 to skip clumping)
