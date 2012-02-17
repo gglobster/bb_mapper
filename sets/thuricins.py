@@ -1,0 +1,26 @@
+genomes = [
+#{'name': 'NEB17', 'file': 'NEB17.fas', 'format': 'fas',
+# 'order': 1, 'nudge': 0, 'offset': 0},
+{'name': 'SF361', 'file': 'SF361.gbk', 'format': 'gbk',
+ 'order': 1, 'nudge': 0, 'offset': 0},
+#{'name': 'vd142', 'file': 'vd142_vd142_70.fas', 'format': 'fas',
+# 'order': 3, 'nudge': 0, 'offset': 0},
+#{'name': 'bag3x2-2', 'file': 'bag3x2-2_bag3x2-2_51.fas', 'format': 'fas',
+# 'order': 4, 'nudge': 0, 'offset': 0},
+#{'name': 'ATCC4342', 'file': 'ATCC4342.fas', 'format': 'fas',
+# 'order': 2, 'nudge': 0, 'offset': 0},
+
+#{'name': 'AH1134', 'file': 'AH1134.fas', 'format': 'fas',
+# 'order': 1, 'nudge': 0, 'offset': 0},
+{'name': 'bag3x2-2', 'file': 'bag3x2-2.fas', 'format': 'fas',
+ 'order': 2, 'nudge': 0, 'offset': 0},
+{'name': 'BGSC4Y1', 'file': 'BGSC4Y1.fas', 'format': 'fas',
+ 'order': 3, 'nudge': 0, 'offset': 0},
+{'name': 'Rock4-2', 'file': 'Rock4-2.fas', 'format': 'fas',
+ 'order': 4, 'nudge': 0, 'offset': 0},
+{'name': 'vd142', 'file': 'vd142.fas', 'format': 'fas',
+ 'order': 5, 'nudge': 0, 'offset': 0},
+#{'name': 'BGSC4AJ1', 'file': 'BGSC4AJ1.fas', 'format': 'fas',
+# 'order': 6, 'nudge': 0, 'offset': 0},
+]
+

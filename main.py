@@ -8,7 +8,8 @@ print "\n", \
       "### Copyright 2012 Geraldine A. Van der Auwera ###\n", \
       "##################################################\n"
 
-from sets.serratia import genomes
+#from sets.serratia import genomes
+from sets.thuricins import genomes
 
 run = argv[1]
 

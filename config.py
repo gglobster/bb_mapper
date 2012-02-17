@@ -51,6 +51,7 @@ fct_colors = {'mge': ('#66CC00', 'MGE'),
 
 # Mauve executable
 mauve_exec = 'progressiveMauve'
+#mauve_exec = 'mauveAligner'
 
 # Datatypes
 mtype = [('A','i4'), ('B','i4'), ('C', 'i4'), ('D','i4')]

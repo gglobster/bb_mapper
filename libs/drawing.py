@@ -8,7 +8,7 @@ from array_tetris import offset_coord, nudge_coord, shade_split, \
 
 ### Hardcoded presets ###
 ## General proportions ##
-u 		= 0.0005 		# conversion factor for sequence length-related values
+u 		=  0.04 #1/50 	# conversion factor for sequence length-related values
 ## (0.0125, increase for short sequences)
 hmar 	= 2*cm			# horizontal margin to canvas (1*cm)
 vmar 	= 2.5*cm		# vertical margin to canvas (2*cm)  
@@ -74,11 +74,14 @@ def canvasser(hCan,vCan,transX,transY,outfile) :
     canvasN.setLineCap(0)
     return canvasN
 
-def base_draw(canvas, cName, cLen, feats, key, dop_Y, Y0, X_shift, map_mode,
-             annot_cnt, nudge, offset, seq_len, annot_mode, side) :
+def base_draw(canvas, genome, feats, key, dop_Y, Y0, X_shift, map_mode,
+             annot_cnt, seq_len, annot_mode, side) :
     """Draw contig baseline and features."""
-    print 'nudge by:', nudge
-    print 'offset by:', offset
+    # unpack info
+    cName = genome.name
+    cLen = genome.len
+    nudge = genome.nudge
+    offset = genome.offset
     # draw plasmid baseline
     baseliner(cLen, canvas, Y0, nudge)
     # label the baseline with plasmid name and size
@@ -373,25 +376,25 @@ def ref_ticker(canvas, feature, cLen, Y0, nudge, offset):
     canvas.setFont(rFont, NfSize)
     ttl.close()
 
-def seq_scale(canvas, scX, incrT, incrN, dip, dop) :
+def seq_scale(canvas, scX, scY, incrT, incrN, dip, dop) :
     """Draws the sequence scale bar."""
     canvas.setLineWidth(1.2)
     canvas.setFillColor(black)
-    incrCNT = 0							# initialize count of increments
+    incrCNT = 0							    # initialize count of increments
     psc = canvas.beginPath()
-    psc.moveTo(scX,dip-dop)				# start at beginning (duh!)
-    psc.lineTo(scX+incrT*incrN,dip-dop)	# draw the scale baseline
+    psc.moveTo(scX, scY+dip-dop)		        # start at beginning (duh!)
+    psc.lineTo(scX+incrT*incrN, scY+dip-dop)	# draw the scale baseline
     # draw ticks until the max number of increments is reached
     while incrCNT <= incrN :
-        psc.moveTo(scX+incrT*incrCNT,dip-dop)
-        psc.lineTo(scX+incrT*incrCNT,dip)
+        psc.moveTo(scX+incrT*incrCNT, scY+dip-dop)
+        psc.lineTo(scX+incrT*incrCNT, scY+dip)
         incrCNT += 1
     canvas.drawPath(psc, stroke=1, fill=0)
     psc.close()
     # write out scale extremities values (needs hand-fix if not using kbs)
     canvas.setFont(rFont,NfSize)
-    canvas.drawRightString(scX,dip+dop,'0')
-    canvas.drawString(scX+incrT*incrN,dip+dop,str(incrN)+' kb')
+    canvas.drawRightString(scX, scY+dip+dop, '0')
+    canvas.drawString(scX+incrT*incrN, scY+dip+dop, str(incrN)+' kb')
 
 def annot_color(fct_flags, annotation):
     """Look up the color to use based on annotation keywords."""
@@ -406,7 +409,7 @@ def annot_color(fct_flags, annotation):
             i +=1
     return fct_key
 
-def contig_draw(cName, in_file, out_file, annot_mode, key):
+def contig_draw(contig, in_file, out_file, annot_mode, key):
     """Draw sequence map of a single contig to file."""
     # load contig record
     seq_record = load_genbank(in_file)
@@ -436,8 +439,8 @@ def contig_draw(cName, in_file, out_file, annot_mode, key):
     # set up main canvas
     canvas = canvasser(hCan, vCan, transX, transY, out_file)
     # draw contig baseline and features -- offsetting disabled
-    base_draw(canvas, cName, ctg_len, feats, key, -doLdn, ctg_Y, 0, 'single',
-             annot_cnt, 0, 0, seq_len, annot_mode, 'top')
+    base_draw(canvas, contig, feats, key, -doLdn, ctg_Y, 0, 'single',
+             annot_cnt, seq_len, annot_mode, 'top')
     # draw scale
     seq_scale(canvas, (ctg_len*u)-pNsize, incrT, incrN, dip, dop)
     # write to file and finalize the figure
@@ -449,7 +452,6 @@ def pairwise_draw(ref, query, segs, map_file, mode1, mode2, annot_mode,
     """Draw pairwise alignment map with similarity shading."""
     # load ref record
     ref_record = load_genbank(ref.gbk)
-    ref_len = len(ref_record.seq)
     ref_feat = ref_record.features
     ref_cds = [feature for feature in ref_feat
                if feature.type == 'CDS' or feature.type == 'cds']
@@ -469,7 +471,6 @@ def pairwise_draw(ref, query, segs, map_file, mode1, mode2, annot_mode,
     query_record = load_genbank(query.gbk)
     if query.invert:
         query_record = query_record.reverse_complement()
-    q_len = len(query_record.seq)
     q_feat = query_record.features
     query_cds = [feature for feature in q_feat
                  if feature.type == 'CDS' or feature.type == 'cds']
@@ -486,10 +487,10 @@ def pairwise_draw(ref, query, segs, map_file, mode1, mode2, annot_mode,
     else:
         query_annot_cnt = len(query_cds)
     # calculate main canvas dimensions - horizontal
-    if ref_len+ref.nudge > q_len:
-        ctg_len = ref_len+ref.nudge
+    if ref.len+ref.nudge > query.len:
+        ctg_len = ref.len+ref.nudge
     else:
-        ctg_len = q_len
+        ctg_len = query.len
     if ctg_len*u < 2000:
         seq_len = 2000
     else:
@@ -510,23 +511,21 @@ def pairwise_draw(ref, query, segs, map_file, mode1, mode2, annot_mode,
     # set up main canvas
     m_canvas = canvasser(hCan, vCan, transX, transY, map_file)
     # draw scale
-    seq_scale(m_canvas, (ctg_len*u)-pNsize, incrT, incrN, dip, dop )
+    seq_scale(m_canvas, (ctg_len*u)-pNsize, 0, incrT, incrN, dip, dop )
     # draw shading legend
     heatkey(m_canvas, -pNsize, -pNsize/2)
     # draw ref baseline and features
-    base_draw(m_canvas, ref.name, ref_len, ref_feat, key1, doLup, ref_Y, 0,
-             mode1, annot_cnt, ref.nudge, ref.offset, seq_len, annot_mode,
-             'top')
+    base_draw(m_canvas, ref, ref_feat, key1, doLup, ref_Y, 0,
+              mode1, annot_cnt, seq_len, annot_mode, 'top')
     # draw query baseline and features
-    base_draw(m_canvas, query.name, q_len, q_feat, key2, -doLdn, query_Y,
-              seq_len/2, mode2, annot_cnt, query.nudge, query.offset, seq_len,
-              annot_mode, 'low')
+    base_draw(m_canvas, query, q_feat, key2, -doLdn, query_Y, seq_len/2,
+              mode2, annot_cnt, seq_len, annot_mode, 'low')
     # draw pairwise similarity shading
     try:
         for xa, xb, xc, xd, idp in segs:
             # evaluate color shading category
             sh_color = HexColor(simcolor(idp))
-            # check for split 
+            # check for split
             if abs(xa) > abs(xb) or abs(xc) > abs(xd):
                 new_segpairs = shade_split(xa, xb, xc, xd, ref, query)
                 for xa1, xb1, xc1, xd1 in new_segpairs:
@@ -544,7 +543,63 @@ def pairwise_draw(ref, query, segs, map_file, mode1, mode2, annot_mode,
 def multi_draw(g_pairs, segdata_list, mapfile):
     """Draw multiple alignment map with similarity shading."""
     print "Lookin\' good!"
-    # use map_mode = 'n'
+    # compile info
+    lengths = [g_pairs[0][0].len+g_pairs[0][0].nudge]
+    g_to_draw = [g_pairs[0][0]]
+    for ref, query in g_pairs:
+        lengths.append(query.len+query.nudge)
+        g_to_draw.append(query)
+    max_len = max(lengths)
+    # calculate main canvas dimensions - horizontal
+    if max_len*u < 2000:
+        seq_len = 2000
+    else:
+        seq_len = max_len*u
+    hCan = hmar*4 + pNsize + seq_len
+    # calculate main canvas dimensions - vertical
+    vCan = dBL*len(g_pairs) + vmar*4
+    transX = hmar + pNsize
+    transY = dBL*len(g_pairs)
+    init_Y = vmar*2
+    # set up main canvas
+    m_canvas = canvasser(hCan, vCan, transX, transY, mapfile)
+    # draw scale (max_len*u)-pNsize, hmar
+    seq_scale(m_canvas, 2*hCan/3, -vmar*2, incrT, incrN, dip, dop)
+    # draw shading legend
+    heatkey(m_canvas, hCan-hmar*5, init_Y+vmar)
+    # draw ref baseline and features 
+    counter = 0
+    for genome in g_to_draw:
+        ref_Y = init_Y-dBL*counter
+        base_draw(m_canvas, genome, [], '', doLup, ref_Y, 0, 'n', 0, seq_len,
+                  'n', 'n')
+        counter +=1
+    counter = 0
+    for ref, query in g_pairs:
+        ref_Y = init_Y-dBL*counter
+        query_Y = init_Y-dBL*(counter+1)
+        # draw pairwise similarity shading
+        try:                                  # TODO: adapt Y
+            for xa, xb, xc, xd, idp in segdata_list[counter]:
+                # evaluate color shading category
+                sh_color = HexColor(simcolor(idp))
+                # check for split
+                if abs(xa) > abs(xb) or abs(xc) > abs(xd):
+                    new_segpairs = shade_split(xa, xb, xc, xd, ref, query)
+                    for xa1, xb1, xc1, xd1 in new_segpairs:
+                        # draw shading
+                        shadowfax(m_canvas, xa1, xb1, xc1, xd1, ref_Y,
+                                  query_Y, sh_color)
+                else:
+                    # draw shading
+                    shadowfax(m_canvas, xa, xb, xc, xd, ref_Y, query_Y,
+                              sh_color)
+            counter +=1
+        except TypeError:
+            pass
+    # write to file and finalize the figure
+    m_canvas.showPage()
+    m_canvas.save()
 
 def shadowfax(canvas_def, xa, xb, xc, xd, aby0, cdy0, sh_color):
     """Draw shaded area between homologous segments."""

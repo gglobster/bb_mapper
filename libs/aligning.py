@@ -9,8 +9,6 @@ from parsing import parse_clustal_idstars, mauver_load2_k0
 from loaders import load_genbank, from_dir
 from array_tetris import chop_rows
 
-
-
 def align_clustal(file_name):
     """Make external call to ClustalW aligner."""
     cline = ClustalwCommandline(infile=file_name)
