@@ -16,7 +16,7 @@ pNsize 	= 5*cm			# width to set aside for plasmid names (2.5*cm)
 di 		= 0.18*cm		# half-length of interruption/frameshift tick marks (0.18*cm)
 doLup 	= 0.6*cm		# distance of ORF labels from their ORF (0.6*cm) (above)
 doLdn   = 0.8*cm		# distance of ORF labels from their ORF (0.8*cm) (below)
-minL 	= 5000			# minimum ORF size (in base pairs) for 'full arrows'
+minL 	= 250			# minimum ORF size (in base pairs) for 'full arrows'
                         # (700, decrease for short seq)
 w 		= 0.3*cm     	# half-width of the tail (0.3*cm)
 h 		= 0.175*cm		# distance from the side tips of the head to the neck (0.175*cm)
@@ -570,9 +570,13 @@ def multi_draw(g_pairs, segdata_list, mapfile):
     # draw ref baseline and features 
     counter = 0
     for genome in g_to_draw:
+        g_record = load_genbank(genome.gbk)
+        g_feat = g_record.features
+        g_cds = [feature for feature in g_feat
+                   if feature.type == 'CDS' or feature.type == 'cds']
         ref_Y = init_Y-dBL*counter
-        base_draw(m_canvas, genome, [], '', doLup, ref_Y, 0, 'n', 0, seq_len,
-                  'n', 'n')
+        base_draw(m_canvas, genome, g_cds, '', doLup, ref_Y, 0, 'n', 0,
+                  seq_len, 'n', 'n')
         counter +=1
     counter = 0
     for ref, query in g_pairs:
