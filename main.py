@@ -9,7 +9,12 @@ print "\n", \
       "##################################################\n"
 
 #from sets.serratia import genomes
+<<<<<<< HEAD
 from sets.thuricins import genomes
+=======
+#from sets.thuricins import genomes
+from sets.nheA_set import ann_30K as genomes
+>>>>>>> updated mapping + multi
 
 run = argv[1]
 
@@ -41,3 +46,7 @@ else:
 
 
 
+<<<<<<< HEAD
+=======
+# TODO: does the phylogeny of the target gene predict the context config???
+>>>>>>> updated mapping + multi

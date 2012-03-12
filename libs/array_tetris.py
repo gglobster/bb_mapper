@@ -178,7 +178,28 @@ def get_anchor_loc(quad_array):
 def offset_segdata(segdata, ref, query):
     """Offset segment coordinates in array to specified values."""
     all_rows_list = [] # array stub to receive new rows
+<<<<<<< HEAD
     for xa, xb, xc, xd, idp in segdata:
+=======
+    try:
+        for xa, xb, xc, xd, idp in segdata:
+            # run loop offsetting
+            xao = offset_coord(xa, ref.len, ref.offset)
+            xbo = offset_coord(xb, ref.len, ref.offset)
+            xco = offset_coord(xc, query.len, query.offset)
+            xdo = offset_coord(xd, query.len, query.offset)
+            # run nudge offsetting
+            xan = nudge_coord(xao, ref.nudge)
+            xbn = nudge_coord(xbo, ref.nudge)
+            xcn = nudge_coord(xco, query.nudge)
+            xdn = nudge_coord(xdo, query.nudge)
+            # save new coordinates
+            offset_row = (xan, xbn, xcn, xdn, idp)
+            all_rows_list.append(offset_row)
+    except TypeError:
+        # TODO: find how to get values fron 0-d array
+        xa, xb, xc, xd, idp = 0,0,0,0,100
+>>>>>>> updated mapping + multi
         # run loop offsetting
         xao = offset_coord(xa, ref.len, ref.offset)
         xbo = offset_coord(xb, ref.len, ref.offset)
@@ -206,7 +227,11 @@ def process_segdata(seg_file, ref, query):
     except StopIteration:
             print "\nERROR"
             raise
+<<<<<<< HEAD
     else: 
+=======
+    else:
+>>>>>>> updated mapping + multi
         # idp-based clumping
         # TODO: add clumping function
         # offset coordinates

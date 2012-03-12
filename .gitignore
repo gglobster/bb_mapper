@@ -1,4 +1,12 @@
 
 data/*
 data/**
+
+versions/*
+versions/**
+
 .idea/workspace.xml
+
+.DS_Store
+
+projectFilesBackup/.idea/workspace.xml
