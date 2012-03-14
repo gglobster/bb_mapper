@@ -9,12 +9,9 @@ print "\n", \
       "##################################################\n"
 
 #from sets.serratia import genomes
-<<<<<<< HEAD
-from sets.thuricins import genomes
-=======
 #from sets.thuricins import genomes
-from sets.nheA_set import ann_30K as genomes
->>>>>>> updated mapping + multi
+#from sets.nheA_set import ann_30K as genomes
+from sets.thuricins import zwitter as genomes
 
 run = argv[1]
 
@@ -44,9 +41,3 @@ elif len(genomes) == 2:
 else:
     align_multi(genomes, new_align, dirs, run)
 
-
-
-<<<<<<< HEAD
-=======
-# TODO: does the phylogeny of the target gene predict the context config???
->>>>>>> updated mapping + multi

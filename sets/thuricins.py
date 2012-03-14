@@ -17,6 +17,21 @@ genomes = [
  'order': 8, 'nudge': 508, 'offset': 0}
 ]
 
+zwitter = [
+{'name': 'AH1134_35', 'file': 'AH1134_35.fas', 'format': 'fas', 'order': 3,
+ 'nudge': 0, 'offset': 0},
+{'name': 'bag3x2-2_51', 'file': 'bag3x2-2_51.fas', 'format': 'fas', 'order': 2,
+ 'nudge': 0, 'offset': 0},
+{'name': 'FJ430564.1', 'file': 'zwitter.gbk', 'format': 'gbk', 'order': 1,
+ 'nudge': 0, 'offset': 0},
+{'name': 'SF361', 'file': 'SF361.gbk', 'format': 'gbk', 'order': 4,
+ 'nudge': 0, 'offset': 0},
+#{'name': 'BGSC4AJ1_87', 'file': 'BGSC4AJ1_87.fas', 'format': 'fas',
+# 'order': 3, 'nudge': 0, 'offset': 0},
+#{'name': 'vd142_81', 'file': 'vd142_81.fas', 'format': 'fas', 'order': 4,
+# 'nudge': 0, 'offset': 0},
+]
+
 backup = [
 #{'name': 'NEB17', 'file': 'NEB17.fas', 'format': 'fas',
 # 'order': 1, 'nudge': 0, 'offset': 0},
