@@ -16,7 +16,7 @@ pNsize 	= 5*cm			# width to set aside for plasmid names (2.5*cm)
 di 		= 0.18*cm		# half-length of interruption/frameshift tick marks (0.18*cm)
 doLup 	= 0.6*cm		# distance of ORF labels from their ORF (0.6*cm) (above)
 doLdn   = 0.8*cm		# distance of ORF labels from their ORF (0.8*cm) (below)
-minL 	= 250			# minimum ORF size (in base pairs) for 'full arrows'
+minL 	= 1000			# minimum ORF size (in base pairs) for 'full arrows'
                         # (700, decrease for short seq)
 w 		= 0.3*cm     	# half-width of the tail (0.3*cm)
 h 		= 0.175*cm		# distance from the side tips of the head to the neck (0.175*cm)

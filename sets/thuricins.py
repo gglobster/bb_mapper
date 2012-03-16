@@ -18,9 +18,10 @@ genomes = [
 ]
 
 zwitter = [
-{'name': 'AH1134_35', 'file': 'AH1134_35.fas', 'format': 'fas', 'order': 3,
+{'name': 'AH1134_35', 'file': 'AH1134_35_ann.gbk', 'format': 'gbk', 'order': 3,
  'nudge': 0, 'offset': 0},
-{'name': 'bag3x2-2_51', 'file': 'bag3x2-2_51.fas', 'format': 'fas', 'order': 2,
+{'name': 'bag3x2-2_51', 'file': 'bag3x2-2_51_ann.gbk', 'format': 'gbk',
+ 'order': 2,
  'nudge': 0, 'offset': 0},
 {'name': 'FJ430564.1', 'file': 'zwitter.gbk', 'format': 'gbk', 'order': 1,
  'nudge': 0, 'offset': 0},
