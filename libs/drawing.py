@@ -8,15 +8,15 @@ from array_tetris import offset_coord, nudge_coord, shade_split, \
 
 ### Hardcoded presets ###
 ## General proportions ##
-u 		=  0.04 #1/50 	# conversion factor for sequence length-related values
+u 		=  0.01 #1/50 	# conversion factor for sequence length-related values
 ## (0.0125, increase for short sequences)
 hmar 	= 2*cm			# horizontal margin to canvas (1*cm)
-vmar 	= 2.5*cm		# vertical margin to canvas (2*cm)  
+vmar 	= 2.5*cm		# vertical margin to canvas (2*cm)
 pNsize 	= 5*cm			# width to set aside for plasmid names (2.5*cm)
 di 		= 0.18*cm		# half-length of interruption/frameshift tick marks (0.18*cm)
 doLup 	= 0.6*cm		# distance of ORF labels from their ORF (0.6*cm) (above)
 doLdn   = 0.8*cm		# distance of ORF labels from their ORF (0.8*cm) (below)
-minL 	= 250			# minimum ORF size (in base pairs) for 'full arrows'
+minL 	= 1000			# minimum ORF size (in base pairs) for 'full arrows'
                         # (700, decrease for short seq)
 w 		= 0.3*cm     	# half-width of the tail (0.3*cm)
 h 		= 0.175*cm		# distance from the side tips of the head to the neck (0.175*cm)
@@ -567,7 +567,7 @@ def multi_draw(g_pairs, segdata_list, mapfile):
     seq_scale(m_canvas, 2*hCan/3, -vmar*2, incrT, incrN, dip, dop)
     # draw shading legend
     heatkey(m_canvas, hCan-hmar*5, init_Y+vmar)
-    # draw ref baseline and features 
+    # draw ref baseline and features
     counter = 0
     for genome in g_to_draw:
         g_record = load_genbank(genome.gbk)
