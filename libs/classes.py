@@ -13,10 +13,10 @@ class Noodle(object):
         self.nudge = genome['nudge']+1
         self.invert = False
 
-        if genome['format'] == 'fas':
+        if genome['input'] == 'fas':
             self.fas = seq_dir+genome['file']
             self.gbk = fas2gbk(seq_dir+genome['file'])
-        elif genome['format'] == 'gbk':
+        elif genome['input'] == 'gbk':
             self.gbk = seq_dir+genome['file']
             self.fas = gbk2fas(seq_dir+genome['file'])
         else:
